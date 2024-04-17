@@ -131,12 +131,12 @@ class Logic {
       Serial.println("Inside processIntensityArrays function");
       va_list args;
       va_start(args, poleCount);
-
-      float** intensityArrays = (float**)malloc(poleCount * sizeof(float*));
-
+      
+      float* intensityArrays[poleCount]; 
       // make a 2D intensity array
       for(auto i = 0 ; i < poleCount ; i++) {
         float* x = va_arg(args, float*);
+        Debug::printArray(x, POLE_COUNT);
         intensityArrays[i] = x;
         //Debug::printArray(x, POLE_COUNT);
       }
@@ -149,7 +149,6 @@ class Logic {
         }
         Serial.println();
       }
-      //Debug::print2DArray(intensityArrays, POLE_COUNT);
 
 
       for(int i = 0 ; i < poleCount ; i++) {
@@ -160,21 +159,20 @@ class Logic {
           }
         }
         intensityValues[i] = max_ele;
+        if (max_ele == 1) 
+          carCounter++;
       }
 
-      // free the memory
-      // internal arrays
-      for (int i = 0; i < poleCount; ++i) {
-        free(intensityArrays[i]);
-      } // external array
-      free(intensityArrays);
 
       Serial.println("Printing intensityValues array: ");
+      Serial.println("Car Count"+ String(carCounter));
+      
       Debug::printArray(intensityValues, POLE_COUNT);
     }
 
   private:
     float intensityValues[POLE_COUNT] = {0};
+    int carCounter = 0;
 
 };
 
@@ -183,10 +181,10 @@ void loop(){
   
   // streetLight(int sensorPin, int ledPin, int streetLightID)
   streetLight* SL0 = new streetLight(2, 3, 0);
-  streetLight* SL1 = new streetLight(2, 3, 1);
-  streetLight* SL2 = new streetLight(2, 3, 2);
-  streetLight* SL3 = new streetLight(2, 3, 3);
-  streetLight* SL4 = new streetLight(2, 3, 4);
+  streetLight* SL1 = new streetLight(4, 5, 1);
+  streetLight* SL2 = new streetLight(7, 9, 2);
+  streetLight* SL3 = new streetLight(8, 10, 3);
+  streetLight* SL4 = new streetLight(12, 11, 4);
 
   //int senseVal = SL0->sense();
   float* intensityArray0 = SL0->returnIntensityArray(0);
@@ -217,17 +215,7 @@ void loop(){
   Serial.println();
   Serial.println();
 
-  // Serial.println("Printing final intensity arrays");
-  // //float* array = new float[POLE_COUNT];
-  // Debug::printArray(intensityArray0, POLE_COUNT);
-  // Debug::printArray(intensityArray1, POLE_COUNT);
-  // Debug::printArray(intensityArray2, POLE_COUNT);
-  // Debug::printArray(intensityArray3, POLE_COUNT);
-  // Debug::printArray(intensityArray4, POLE_COUNT);
-
-  delay(1000);
-
-  
+  delay(10000);
 
   Serial.println();
   Serial.println();
