@@ -1,6 +1,8 @@
 #define POLE_COUNT 5
 
 #include <stdarg.h>
+#include <math.h>
+#include <limits.h>
 
 void setup() {
   // setup serial port
@@ -98,12 +100,18 @@ class streetLight : public led, public sensor{
          //Debug::printArray(intensityArray, POLE_COUNT);
 
          return intensityArray;
+      } else {
+        for(int i = 0 ; i < POLE_COUNT ; i++) {
+          intensityArray[i] = 0;
+        }
+
+        return intensityArray;
       }
     }
 
     // destructor
     ~streetLight(){
-      Serial.println("object destroyed");
+      Serial.println("Street light object destroyed");
     }
 
   private:
@@ -113,9 +121,14 @@ class streetLight : public led, public sensor{
     volatile int sensorInput;
 }; 
 
-class logic {
+class Logic {
   public:
-    static void processIntensityArrays(int poleCount, ...) {
+    Logic() {
+      Serial.println("Logic class default constructor");
+    }
+
+    void processIntensityArrays(int poleCount, ...) {
+      Serial.println("Inside processIntensityArrays function");
       va_list args;
       va_start(args, poleCount);
 
@@ -128,6 +141,7 @@ class logic {
         //Debug::printArray(x, POLE_COUNT);
       }
       
+      // remove this, only for debug purpose
       for(int i = 0 ; i < poleCount ; i++) {
           Serial.println("Printing array " + String(i));
         for(int j = 0 ; j < poleCount ; j++) {
@@ -137,10 +151,30 @@ class logic {
       }
       //Debug::print2DArray(intensityArrays, POLE_COUNT);
 
+
+      for(int i = 0 ; i < poleCount ; i++) {
+        float max_ele = INT_MIN;
+        for(int j = 0 ; j < poleCount ; j++) {
+          if (intensityArrays[j][i] > max_ele) {
+            max_ele = intensityArrays[j][i];
+          }
+        }
+        intensityValues[i] = max_ele;
+      }
+
+      // free the memory
+      // internal arrays
+      for (int i = 0; i < poleCount; ++i) {
+        free(intensityArrays[i]);
+      } // external array
+      free(intensityArrays);
+
+      Serial.println("Printing intensityValues array: ");
+      Debug::printArray(intensityValues, POLE_COUNT);
     }
 
   private:
-    volatile float intensityValues[POLE_COUNT];
+    float intensityValues[POLE_COUNT] = {0};
 
 };
 
@@ -156,13 +190,15 @@ void loop(){
 
   //int senseVal = SL0->sense();
   float* intensityArray0 = SL0->returnIntensityArray(0);
-  float* intensityArray1 = SL1->returnIntensityArray(0);
-  float* intensityArray2 = SL2->returnIntensityArray(0);
-  float* intensityArray3 = SL3->returnIntensityArray(0);
+  float* intensityArray1 = SL1->returnIntensityArray(1);
+  float* intensityArray2 = SL2->returnIntensityArray(1);
+  float* intensityArray3 = SL3->returnIntensityArray(1);
   float* intensityArray4 = SL4->returnIntensityArray(0);
 
   // to combine the intensity arrays into one final array
-  logic::processIntensityArrays(
+  Logic* logic = new Logic();
+  
+  logic -> processIntensityArrays(
     POLE_COUNT,
     intensityArray0,
     intensityArray1,
@@ -170,6 +206,13 @@ void loop(){
     intensityArray3,
     intensityArray4
   );
+
+  delete logic;
+  delete SL0;
+  delete SL1;
+  delete SL2;
+  delete SL3;
+  delete SL4;
 
   Serial.println();
   Serial.println();
@@ -182,8 +225,9 @@ void loop(){
   // Debug::printArray(intensityArray3, POLE_COUNT);
   // Debug::printArray(intensityArray4, POLE_COUNT);
 
-  delay(10000);
-  delete SL0;
+  delay(1000);
+
+  
 
   Serial.println();
   Serial.println();
