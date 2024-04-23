@@ -13,7 +13,6 @@ void setup() {
     pinMode(sensorPins[i], INPUT); // Set sensor pins as input
     pinMode(mosfetPins[i], OUTPUT); // Set MOSFET pins as output
   }
-
 }
 
 class led{
@@ -67,7 +66,7 @@ class streetLight : public led, public sensor{
           intensityArray[streetLightID + 1] = 0.1;
           intensityArray[streetLightID] = 1;
          }
-//         Debug::printArray(intensityArray, POLE_COUNT);
+//       Debug::printArray(intensityArray, POLE_COUNT);
 
          return intensityArray;
       } else {
