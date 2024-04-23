@@ -13,11 +13,37 @@ void setup() {
     pinMode(sensorPins[i], INPUT); // Set sensor pins as input
     pinMode(mosfetPins[i], OUTPUT); // Set MOSFET pins as output
   }
+
 }
+
+//// Debug class, remove in final code
+class Debug {
+public:
+    template<typename T>
+    static void printArray(T* arr, int size) {
+        for (int i = 0; i < size; ++i) {
+            Serial.print(arr[i]);
+            Serial.print(" ");
+        }
+        Serial.println();
+    }
+
+    template<typename T>
+    static void print2DArray(T** arr, int size) {
+      Serial.println("Printing 2D array");
+      for (int i = 0 ; i < size ; i++) {
+        for(int j = 0 ; i < size ; j++) {
+          Serial.print(String(arr[i][j])+" ");
+        }
+        Serial.println();
+      }
+    }
+};
 
 class led{
   public:
     virtual void changeIntensity(float intensity) = 0;
+
 };
 
 class sensor{
@@ -39,6 +65,7 @@ class streetLight : public led, public sensor{
 
     // an implementation of sense() method from the class sensor
     int sense() {
+      // put sensorInput = 0 for testing
       sensorInput = digitalRead(sensorPin);
       return sensorInput;
     }
@@ -66,7 +93,7 @@ class streetLight : public led, public sensor{
           intensityArray[streetLightID + 1] = 0.1;
           intensityArray[streetLightID] = 1;
          }
-//       Debug::printArray(intensityArray, POLE_COUNT);
+//         Debug::printArray(intensityArray, POLE_COUNT);
 
          return intensityArray;
       } else {
@@ -96,7 +123,9 @@ class Logic {
       // make a 2D intensity array
       for(auto i = 0 ; i < poleCount ; i++) {
         float* x = va_arg(args, float*);
+//        Debug::printArray(x, POLE_COUNT);
         intensityArrays[i] = x;
+        //Debug::printArray(x, POLE_COUNT);
       }
 
 
@@ -127,6 +156,7 @@ class Logic {
 void loop(){
   int sensor;
   
+  // streetLight(int sensorPin, int ledPin, int streetLightID)
   streetLight* SL0 = new streetLight(2, 3, 0);
   streetLight* SL1 = new streetLight(4, 5, 1);
   streetLight* SL2 = new streetLight(7, 9, 2);
@@ -139,12 +169,14 @@ void loop(){
   int sensorVal3 = SL3->sense();
   int sensorVal4 = SL4->sense();
 
+  //int senseVal = SL0->sense();
   float* intensityArray0 = SL0->returnIntensityArray(sensorVal0);
   float* intensityArray1 = SL1->returnIntensityArray(sensorVal1);
   float* intensityArray2 = SL2->returnIntensityArray(sensorVal2);
   float* intensityArray3 = SL3->returnIntensityArray(sensorVal3);
   float* intensityArray4 = SL4->returnIntensityArray(sensorVal4);
 
+  // to combine the intensity arrays into one final array
   Logic* logic = new Logic();
 
   float* intensityValues = new float[POLE_COUNT];
@@ -157,7 +189,7 @@ void loop(){
     intensityArray3,
     intensityArray4
   );
-
+//  Debug::printArray(intensityValues, POLE_COUNT);
   SL0->changeIntensity(intensityValues[0]);
   SL1->changeIntensity(intensityValues[1]);
   SL2->changeIntensity(intensityValues[2]);
@@ -171,6 +203,6 @@ void loop(){
   delete SL3;
   delete SL4;
 
-  delay(1000);
+  delay(500);
   
 }
