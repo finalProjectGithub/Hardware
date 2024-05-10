@@ -1,4 +1,6 @@
 #define POLE_COUNT 5
+const int mosfetPins[POLE_COUNT] = {3, 5, 9, 10, 11};
+const int sensorPins[POLE_COUNT] = {2, 4, 7, 8, 12};
 
 #include <stdarg.h>
 #include <math.h>
@@ -7,10 +9,14 @@
 void setup() {
   // setup serial port
   Serial.begin(9600); 
+  for (int i = 0; i < POLE_COUNT; i++) {
+    pinMode(sensorPins[i], INPUT); // Set sensor pins as input
+    pinMode(mosfetPins[i], OUTPUT); // Set MOSFET pins as output
+  }
 
 }
 
-// Debug class, remove in final code
+//// Debug class, remove in final code
 class Debug {
 public:
     template<typename T>
@@ -34,24 +40,22 @@ public:
     }
 };
 
+class previousIntensityArray {
+  public:
+    static  float* PreviousIntensityArray[POLE_COUNT];
+};
+
+//
 class led{
   public:
-    virtual void changeIntensity() = 0;
+    virtual void changeIntensity(float intensity) = 0;
 
-    // destructor of led class
-    ~led() {
-      Serial.println("led class object destroyed");
-    }
 };
 
 class sensor{
   public:
     virtual int sense() = 0;
 
-    // destructor of sensor class
-    ~sensor() {
-    Serial.println("Sensor class object destroyed");
-    }
 };
 
 class streetLight : public led, public sensor{
@@ -63,41 +67,39 @@ class streetLight : public led, public sensor{
       this -> streetLightID = streetLightID;
       this->sensorPin = sensorPin;
       this->ledPin = ledPin;
-      Serial.println("Object " + String(streetLightID) + " created");
     }
 
     // an implementation of sense() method from the class sensor
     int sense() {
       // put sensorInput = 0 for testing
-      sensorInput = 0; //digitalRead(sensorPin);
+      sensorInput = digitalRead(sensorPin);
       return sensorInput;
     }
 
     // an implementation of changeIntensity() method from the class led
-    void changeIntensity() {
-      analogWrite(ledPin, 5);
+    void changeIntensity(float intensity) {
+      analogWrite(ledPin, intensity*255);
     }
 
     // returns the intensity array according to a single sensor
     float* returnIntensityArray(int sensorInput) {
-      Serial.println("streetLightID = " + String(streetLightID));
       // assuming a vehicle is detected
       if(!sensorInput) { 
         // case 1 : first pole
          if(streetLightID == 0) {
             intensityArray [ streetLightID ] = 1;
-            intensityArray [ streetLightID + 1 ] = 0.5;
+            intensityArray [ streetLightID + 1 ] = 0.1;
         // case 2 : last pole
          } else if(streetLightID == POLE_COUNT) {
-            intensityArray[streetLightID - 1] = 0.5;
+            intensityArray[streetLightID - 1] = 0.1;
             intensityArray[streetLightID] = 1;
         // case 3 : general case           
          } else {
-          intensityArray[streetLightID - 1] = 0.5;
-          intensityArray[streetLightID + 1] = 0.5;
+          intensityArray[streetLightID - 1] = 0.1;
+          intensityArray[streetLightID + 1] = 0.1;
           intensityArray[streetLightID] = 1;
          }
-         //Debug::printArray(intensityArray, POLE_COUNT);
+//         Debug::printArray(intensityArray, POLE_COUNT);
 
          return intensityArray;
       } else {
@@ -109,11 +111,6 @@ class streetLight : public led, public sensor{
       }
     }
 
-    // destructor
-    ~streetLight(){
-      Serial.println("Street light object destroyed");
-    }
-
   private:
     int streetLightID;
     int sensorPin, ledPin;
@@ -123,33 +120,19 @@ class streetLight : public led, public sensor{
 
 class Logic {
   public:
-    Logic() {
-      Serial.println("Logic class default constructor");
-    }
 
-    void processIntensityArrays(int poleCount, ...) {
-      Serial.println("Inside processIntensityArrays function");
+    float* processIntensityArrays(int poleCount, ...) {
       va_list args;
       va_start(args, poleCount);
-
-      float** intensityArrays = (float**)malloc(poleCount * sizeof(float*));
-
+      
+      float* intensityArrays[poleCount]; 
       // make a 2D intensity array
       for(auto i = 0 ; i < poleCount ; i++) {
         float* x = va_arg(args, float*);
+//        Debug::printArray(x, POLE_COUNT);
         intensityArrays[i] = x;
         //Debug::printArray(x, POLE_COUNT);
       }
-      
-      // remove this, only for debug purpose
-      for(int i = 0 ; i < poleCount ; i++) {
-          Serial.println("Printing array " + String(i));
-        for(int j = 0 ; j < poleCount ; j++) {
-          Serial.print(String(intensityArrays[i][j])+" ");
-        }
-        Serial.println();
-      }
-      //Debug::print2DArray(intensityArrays, POLE_COUNT);
 
 
       for(int i = 0 ; i < poleCount ; i++) {
@@ -160,21 +143,19 @@ class Logic {
           }
         }
         intensityValues[i] = max_ele;
+        if (max_ele == 1) 
+          carCounter++;
       }
 
-      // free the memory
-      // internal arrays
-      for (int i = 0; i < poleCount; ++i) {
-        free(intensityArrays[i]);
-      } // external array
-      free(intensityArrays);
 
-      Serial.println("Printing intensityValues array: ");
-      Debug::printArray(intensityValues, POLE_COUNT);
+      Serial.println(carCounter);
+      return intensityValues;
+      
     }
 
   private:
     float intensityValues[POLE_COUNT] = {0};
+    int carCounter = 0;
 
 };
 
@@ -183,22 +164,30 @@ void loop(){
   
   // streetLight(int sensorPin, int ledPin, int streetLightID)
   streetLight* SL0 = new streetLight(2, 3, 0);
-  streetLight* SL1 = new streetLight(2, 3, 1);
-  streetLight* SL2 = new streetLight(2, 3, 2);
-  streetLight* SL3 = new streetLight(2, 3, 3);
-  streetLight* SL4 = new streetLight(2, 3, 4);
+  streetLight* SL1 = new streetLight(4, 5, 1);
+  streetLight* SL2 = new streetLight(7, 9, 2);
+  streetLight* SL3 = new streetLight(8, 10, 3);
+  streetLight* SL4 = new streetLight(12, 11, 4);
+
+  int sensorVal0 = SL0->sense();
+  int sensorVal1 = SL1->sense();
+  int sensorVal2 = SL2->sense();
+  int sensorVal3 = SL3->sense();
+  int sensorVal4 = SL4->sense();
 
   //int senseVal = SL0->sense();
-  float* intensityArray0 = SL0->returnIntensityArray(0);
-  float* intensityArray1 = SL1->returnIntensityArray(1);
-  float* intensityArray2 = SL2->returnIntensityArray(1);
-  float* intensityArray3 = SL3->returnIntensityArray(1);
-  float* intensityArray4 = SL4->returnIntensityArray(0);
+  float* intensityArray0 = SL0->returnIntensityArray(sensorVal0);
+  float* intensityArray1 = SL1->returnIntensityArray(sensorVal1);
+  float* intensityArray2 = SL2->returnIntensityArray(sensorVal2);
+  float* intensityArray3 = SL3->returnIntensityArray(sensorVal3);
+  float* intensityArray4 = SL4->returnIntensityArray(sensorVal4);
 
   // to combine the intensity arrays into one final array
   Logic* logic = new Logic();
+
+  float* intensityValues = new float[POLE_COUNT];
   
-  logic -> processIntensityArrays(
+  intensityValues = logic -> processIntensityArrays(
     POLE_COUNT,
     intensityArray0,
     intensityArray1,
@@ -206,6 +195,12 @@ void loop(){
     intensityArray3,
     intensityArray4
   );
+//  Debug::printArray(intensityValues, POLE_COUNT);
+  SL0->changeIntensity(intensityValues[0]);
+  SL1->changeIntensity(intensityValues[1]);
+  SL2->changeIntensity(intensityValues[2]);
+  SL3->changeIntensity(intensityValues[3]);
+  SL4->changeIntensity(intensityValues[4]);
 
   delete logic;
   delete SL0;
@@ -214,22 +209,6 @@ void loop(){
   delete SL3;
   delete SL4;
 
-  Serial.println();
-  Serial.println();
-
-  // Serial.println("Printing final intensity arrays");
-  // //float* array = new float[POLE_COUNT];
-  // Debug::printArray(intensityArray0, POLE_COUNT);
-  // Debug::printArray(intensityArray1, POLE_COUNT);
-  // Debug::printArray(intensityArray2, POLE_COUNT);
-  // Debug::printArray(intensityArray3, POLE_COUNT);
-  // Debug::printArray(intensityArray4, POLE_COUNT);
-
-  delay(1000);
-
-  
-
-  Serial.println();
-  Serial.println();
+  delay(500);
   
 }
